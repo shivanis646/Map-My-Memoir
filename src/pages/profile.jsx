@@ -2,14 +2,26 @@ import "../styles/profile.css";
 import logo from "../assets/Map_My_Memoir__1_-removebg-preview.png";
 import { logoutUser } from "../utils/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { FaHome, FaMapMarkedAlt, FaPlus, FaCompass, FaHeart, FaUser } from "react-icons/fa";
+import {
+  FaHome,
+  FaMapMarkedAlt,
+  FaPlus,
+  FaCompass,
+  FaHeart,
+  FaUser
+} from "react-icons/fa";
 import { GiSecretBook } from "react-icons/gi";
 import React, { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 
 function Profile() {
   const navigate = useNavigate();
+
   const [user, setUser] = useState(null);
+  const [latestMemories, setLatestMemories] = useState([]);
+
+  // ✅ NEW: total memories count (public + private)
+  const [memoryCount, setMemoryCount] = useState(0);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -24,52 +36,77 @@ function Profile() {
   useEffect(() => {
     document.title = "Map My Memoir - Profile";
 
-    const fetchUser = async () => {
-      // Properly await the session
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const fetchProfileData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (!currentSession) {
+      if (!session) {
         navigate("/login");
         return;
       }
 
-      const userId = currentSession.user.id;
+      const userId = session.user.id;
 
-      // Fetch user data from Supabase "profiles" table
-      const { data, error } = await supabase
+      /* 🔹 Fetch profile info */
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id,name,profilepic,tagline,memories,countries,favorites,latestmemories")
+        .select("id,name,profilepic,tagline,countries,favorites")
         .eq("id", userId)
-        .maybeSingle();
+        .single();
 
-      if (error) {
-        console.error("Failed to fetch user:", error.message);
+      if (profileError) {
+        console.error("Profile fetch error:", profileError.message);
         navigate("/login");
         return;
       }
 
-      setUser(data);
+      setUser(profileData);
+
+      /* 🔹 Fetch latest 3 memories */
+      const { data: memoryData, error: memoryError } = await supabase
+        .from("memories")
+        .select("id,title,memory_story,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (memoryError) {
+        console.error("Error fetching latest memories:", memoryError.message);
+      } else {
+        setLatestMemories(memoryData || []);
+      }
+
+      /* 🔹 Count ALL memories (public + private) */
+      const { count, error: countError } = await supabase
+        .from("memories")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (countError) {
+        console.error("Error counting memories:", countError.message);
+      } else {
+        setMemoryCount(count || 0);
+      }
     };
 
-    fetchUser();
+    fetchProfileData();
   }, [navigate]);
 
   if (!user) return <p>Loading profile...</p>;
 
   return (
     <div className="layout">
-      {/* Left Icon Sidebar */}
+      {/* Sidebar */}
       <aside className="icon-sidebar">
         <div className="sidebar-top">
           <img src={logo} alt="Logo" className="sidebar-logo" />
         </div>
         <nav className="sidebar-nav">
-          <Link to="/" title="Home"><FaHome color="#5e412f" /></Link>
-          <Link to="/mymap" title="My Map"><FaMapMarkedAlt color="#5e412f" /></Link>
-          <Link to="/create" title="Create Memory"><FaPlus color="#5e412f" /></Link>
-          <Link to="/explore" title="Explore"><FaCompass color="#5e412f" /></Link>
-          <Link to="/vault" title="Vault"><GiSecretBook color="#5e412f" /></Link>
-          <Link to="/favorites" title="Favorites"><FaHeart color="#5e412f" /></Link>
+          <Link to="/"><FaHome color="#5e412f" /></Link>
+          <Link to="/mymap"><FaMapMarkedAlt color="#5e412f" /></Link>
+          <Link to="/create"><FaPlus color="#5e412f" /></Link>
+          <Link to="/explore"><FaCompass color="#5e412f" /></Link>
+          <Link to="/vault"><GiSecretBook color="#5e412f" /></Link>
+          <Link to="/favorites"><FaHeart color="#5e412f" /></Link>
         </nav>
       </aside>
 
@@ -77,7 +114,7 @@ function Profile() {
       <div className="main-content">
         <header className="navbar">
           <p>Map My Memoir</p>
-          <Link className="prof" to="/profile" title="Profile">
+          <Link className="prof" to="/profile">
             <FaUser size={27} color="#5e412f" />
           </Link>
         </header>
@@ -85,13 +122,17 @@ function Profile() {
         {/* Profile Section */}
         <section className="profile-section">
           <div className="profile-card">
-            <img src={user.profilepic || "/default-profile.png"} alt="Profile" className="profile-img" />
+            <img
+              src={user.profilepic || "/default-profile.png"}
+              alt="Profile"
+              className="profile-img"
+            />
             <h2>{user.name}</h2>
             <p className="tagline">"{user.tagline || "Life is a journey..."}"</p>
 
             <div className="profile-stats">
               <div>
-                <h3>{user.memories || 0}</h3>
+                <h3>{memoryCount}</h3>
                 <p>Memories</p>
               </div>
               <div>
@@ -105,21 +146,29 @@ function Profile() {
             </div>
 
             <div className="d">
-              <button className="btn" onClick={handleEditClick}>Edit Profile</button>
-              <button className="btn logout-btn" onClick={handleLogout}>Logout</button>
+              <button className="btn" onClick={handleEditClick}>
+                Edit Profile
+              </button>
+              <button className="btn logout-btn" onClick={handleLogout}>
+                Logout
+              </button>
             </div>
           </div>
         </section>
 
-        {/* Memory Preview */}
+        {/* Latest Memories */}
         <section className="memory-preview">
           <h3>Your Latest Memories</h3>
           <div className="memory-list">
-            {user.latestmemories && user.latestmemories.length > 0 ? (
-              user.latestmemories.map((memory, index) => (
-                <div className="memory-card1" key={index}>
+            {latestMemories.length > 0 ? (
+              latestMemories.map(memory => (
+                <div className="memory-card1" key={memory.id}>
                   <h4>{memory.title}</h4>
-                  <p>{memory.preview || memory.memoryStory}</p>
+                  <p>
+                    {memory.memory_story
+                      ? memory.memory_story.slice(0, 80) + "..."
+                      : "No preview available"}
+                  </p>
                 </div>
               ))
             ) : (
@@ -128,7 +177,6 @@ function Profile() {
           </div>
         </section>
 
-        {/* Footer */}
         <footer>
           <p>© 2025 Map My Memoir. All Rights Reserved.</p>
         </footer>

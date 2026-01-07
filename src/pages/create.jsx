@@ -53,29 +53,29 @@ function Create() {
 
     // --- Upload Images ---
     // --- Upload Images ---
-// --- Upload Images ---
-// --- Upload Images ---
-const uploadedFiles = [];
-if (formData.images && formData.images.length > 0) {
-  for (let i = 0; i < formData.images.length; i++) {
-    const file = formData.images[i];
-    const fileName = `${Date.now()}_${file.name}`;
+    // --- Upload Images ---
+    // --- Upload Images ---
+    const uploadedFiles = [];
+    if (formData.images && formData.images.length > 0) {
+      for (let i = 0; i < formData.images.length; i++) {
+        const file = formData.images[i];
+        const fileName = `${Date.now()}_${file.name}`;
 
-    // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
-      .from("memory-images")
-      .upload(fileName, file);
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from("memory-images")
+          .upload(fileName, file);
 
-    if (uploadError) {
-      console.error("Upload error:", uploadError.message);
-      alert("Failed to upload image!");
-      return;
+        if (uploadError) {
+          console.error("Upload error:", uploadError.message);
+          alert("Failed to upload image!");
+          return;
+        }
+
+        // Save just the file name/path in the table
+        uploadedFiles.push(fileName);
+      }
     }
-
-    // Save just the file name/path in the table
-    uploadedFiles.push(fileName);
-  }
-}
 
 
 
@@ -83,26 +83,26 @@ if (formData.images && formData.images.length > 0) {
     // --- Resolve Short URL to Lat/Lng ---
     // Resolve lat/lng from map link
     // --- Resolve Short URL to Lat/Lng using Supabase Edge Function ---
-// --- Resolve Short URL to Lat/Lng ---
-// --- Resolve Short URL to Lat/Lng using Supabase Edge Function ---
-// --- Resolve Short URL to Lat/Lng ---
-let lat = null, lng = null;
-if (formData.maploc) {
-  try {
-    const res = await fetch(`http://localhost:5000/geo/resolve?url=${encodeURIComponent(formData.maploc)}`);
-    const data = await res.json();
+    // --- Resolve Short URL to Lat/Lng ---
+    // --- Resolve Short URL to Lat/Lng using Supabase Edge Function ---
+    // --- Resolve Short URL to Lat/Lng ---
+    let lat = null, lng = null;
+    if (formData.maploc) {
+      try {
+        const res = await fetch(`http://localhost:5000/geo/resolve?url=${encodeURIComponent(formData.maploc)}`);
+        const data = await res.json();
 
-    if (data.lat && data.lng) {
-      lat = data.lat;
-      lng = data.lng;
-      console.print(lng,lat);
-    } else {
-      console.warn("Could not resolve coordinates:", data.error);
+        if (data.lat && data.lng) {
+          lat = data.lat;
+          lng = data.lng;
+          console.log(lng, lat);
+        } else {
+          console.warn("Could not resolve coordinates:", data.error);
+        }
+      } catch (err) {
+        console.error("Resolve failed:", err);
+      }
     }
-  } catch (err) {
-    console.error("Resolve failed:", err);
-  }
-}
 
 
 
@@ -190,14 +190,64 @@ if (formData.maploc) {
             <textarea rows="3" name="storyPlace" value={formData.storyPlace} onChange={handleChange} placeholder="e.g., Built by Rawal Jaisal in 1156 AD..." />
 
             <label>Emotion Tag:</label>
-            <select name="emotion" value={formData.emotion} onChange={handleChange}>
-              <option value="">Select one</option>
-              <option>😊 Peaceful</option>
-              <option>😮 Awe-struck</option>
-              <option>🥹 Nostalgic</option>
-              <option>🤍 Loved</option>
-              <option>😢 Emotional</option>
-            </select>
+            <div className="radio-group">
+              <label>
+                <input
+                  type="radio"
+                  name="emotion"
+                  value="peaceful"
+                  checked={formData.emotion === "peaceful"}
+                  onChange={handleChange}
+                />
+                😌 Peaceful
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="emotion"
+                  value="happy"
+                  checked={formData.emotion === "happy"}
+                  onChange={handleChange}
+                />
+                😊 Happy
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="emotion"
+                  value="nostalgic"
+                  checked={formData.emotion === "nostalgic"}
+                  onChange={handleChange}
+                />
+                🕰️ Nostalgic
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="emotion"
+                  value="sad"
+                  checked={formData.emotion === "sad"}
+                  onChange={handleChange}
+                />
+                😔 Sad
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="emotion"
+                  value="excited"
+                  checked={formData.emotion === "excited"}
+                  onChange={handleChange}
+                />
+                🤩 Excited
+              </label>
+            </div>
+
+
 
             <label>Photo:</label>
             <input type="file" name="images" accept="image/*" capture="environment" multiple onChange={handleChange} />
