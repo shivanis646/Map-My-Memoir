@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Project from "./pages/project";
 import Profile from "./pages/profile";
 import Signup from "./pages/signup";
@@ -17,7 +17,7 @@ import { MemoryProvider } from "./context/MemoryContext";
 
 function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <MemoryProvider>
         <Routes>
           {/* Public Routes */}
@@ -80,7 +80,7 @@ function App() {
           />
         </Routes>
       </MemoryProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
