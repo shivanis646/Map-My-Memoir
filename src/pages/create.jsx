@@ -89,7 +89,7 @@ function Create() {
     let lat = null, lng = null;
     if (formData.maploc) {
       try {
-        const res = await fetch(`/api/geo-resolve?url=${encodeURIComponent(formData.maploc)}`);
+        const res = await fetch(`http://localhost:5000/geo/resolve?url=${encodeURIComponent(formData.maploc)}`);
         const data = await res.json();
 
         if (data.lat && data.lng) {
